@@ -1,0 +1,183 @@
+# Individual Charger Cards
+# Copy these cards to your existing dashboard
+# Replace "vool_charger" with your actual device name
+
+# Main Status Card (requires mushroom-cards from HACS)
+status_card:
+  type: custom:mushroom-template-card
+  primary: "{{ states('sensor.vool_charger_charger_state') }}"
+  secondary: >-
+    {% if is_state('binary_sensor.vool_charger_charging', 'on') %}
+      Charging at {{ states('sensor.vool_charger_active_power') }} kW
+    {% elif is_state('binary_sensor.vool_charger_connected', 'on') %}
+      Vehicle connected
+    {% else %}
+      No vehicle connected
+    {% endif %}
+  icon: >-
+    {% if is_state('binary_sensor.vool_charger_charging', 'on') %}
+      mdi:battery-charging
+    {% elif is_state('binary_sensor.vool_charger_connected', 'on') %}
+      mdi:ev-plug-type2
+    {% else %}
+      mdi:ev-station
+    {% endif %}
+  icon_color: >-
+    {% if is_state('binary_sensor.vool_charger_charging', 'on') %}
+      green
+    {% elif is_state('binary_sensor.vool_charger_connected', 'on') %}
+      blue
+    {% else %}
+      grey
+    {% endif %}
+  layout: vertical
+  tap_action:
+    action: more-info
+  entity: sensor.vool_charger_charger_state
+
+# Power Gauge Card
+power_gauge:
+  type: gauge
+  entity: sensor.vool_charger_active_power
+  name: Charging Power
+  unit: kW
+  min: 0
+  max: 22
+  severity:
+    green: 0
+    yellow: 11
+    red: 18
+  needle: true
+
+# Power and Energy Info Card
+power_info:
+  type: glance
+  title: Power & Energy
+  entities:
+    - entity: sensor.vool_charger_active_power
+      name: Power
+    - entity: sensor.vool_charger_energy_imported
+      name: Energy
+    - entity: sensor.vool_charger_external_current_limit
+      name: Current Limit
+
+# Current Graph (requires mini-graph-card from HACS)
+current_graph:
+  type: custom:mini-graph-card
+  entities:
+    - entity: sensor.vool_charger_current_l1
+      name: L1
+      color: '#f44336'
+    - entity: sensor.vool_charger_current_l2
+      name: L2
+      color: '#4caf50'
+    - entity: sensor.vool_charger_current_l3
+      name: L3
+      color: '#2196f3'
+  name: Current per Phase
+  hours_to_show: 1
+  points_per_hour: 60
+  line_width: 2
+  show:
+    labels: true
+    points: false
+
+# Voltage Graph (requires mini-graph-card from HACS)
+voltage_graph:
+  type: custom:mini-graph-card
+  entities:
+    - entity: sensor.vool_charger_voltage_l1
+      name: L1
+      color: '#f44336'
+    - entity: sensor.vool_charger_voltage_l2
+      name: L2
+      color: '#4caf50'
+    - entity: sensor.vool_charger_voltage_l3
+      name: L3
+      color: '#2196f3'
+  name: Voltage per Phase
+  hours_to_show: 1
+  points_per_hour: 60
+  line_width: 2
+  show:
+    labels: true
+    points: false
+
+# Control Buttons Grid
+control_buttons:
+  type: grid
+  columns: 3
+  cards:
+    - type: button
+      entity: switch.vool_charger_charging_enabled
+      name: Enable
+      icon: mdi:ev-plug-type2
+      tap_action:
+        action: toggle
+    - type: button
+      entity: button.vool_charger_start_charge
+      name: Start
+      icon: mdi:play
+      tap_action:
+        action: call-service
+        service: button.press
+        target:
+          entity_id: button.vool_charger_start_charge
+    - type: button
+      entity: button.vool_charger_stop_charge
+      name: Stop
+      icon: mdi:stop
+      tap_action:
+        action: call-service
+        service: button.press
+        target:
+          entity_id: button.vool_charger_stop_charge
+
+# Current Limit Slider
+current_limit:
+  type: entities
+  entities:
+    - entity: number.vool_charger_external_current_limit
+      name: External Current Limit
+
+# Settings Card
+settings_card:
+  type: entities
+  title: Charger Settings
+  entities:
+    - entity: select.vool_charger_allowed_phases
+      name: Allowed Phases
+    - entity: number.vool_charger_external_current_limit
+      name: External Current Limit
+    - entity: switch.vool_charger_charging_enabled
+      name: Charging Enabled
+
+# All Readings Card
+all_readings:
+  type: entities
+  title: All Charger Readings
+  entities:
+    - entity: sensor.vool_charger_charger_state
+      name: State
+    - entity: sensor.vool_charger_active_power
+      name: Active Power
+    - entity: sensor.vool_charger_l1_power
+      name: L1 Power
+    - entity: sensor.vool_charger_l2_power
+      name: L2 Power
+    - entity: sensor.vool_charger_l3_power
+      name: L3 Power
+    - entity: sensor.vool_charger_current_l1
+      name: Current L1
+    - entity: sensor.vool_charger_current_l2
+      name: Current L2
+    - entity: sensor.vool_charger_current_l3
+      name: Current L3
+    - entity: sensor.vool_charger_voltage_l1
+      name: Voltage L1
+    - entity: sensor.vool_charger_voltage_l2
+      name: Voltage L2
+    - entity: sensor.vool_charger_voltage_l3
+      name: Voltage L3
+    - entity: sensor.vool_charger_energy_imported
+      name: Energy Imported

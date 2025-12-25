@@ -1,0 +1,8 @@
+{
+    "name": "VOOL Modbus",
+    "homeassistant": "2024.1.0",
+    "render_readme": true,
+    "country": ["EE", "LV", "LT", "FI", "SE", "NO", "DK", "DE", "NL", "BE", "FR", "GB", "ES", "PT", "IT", "AT", "CH", "PL", "CZ"],
+    "zip_release": true,
+    "filename": "vool_modbus.zip"
+}

@@ -1,0 +1,177 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "VOOL Device Type",
+                "description": "Select the type of VOOL device you want to add.",
+                "data": {
+                    "device_type": "Device Type"
+                }
+            },
+            "connection": {
+                "title": "Connection Settings",
+                "description": "Configure connection to your VOOL {device_type}.",
+                "data": {
+                    "host": "IP Address",
+                    "port": "Modbus TCP Port",
+                    "slave_id": "Modbus Slave ID",
+                    "name": "Device Name"
+                },
+                "data_description": {
+                    "host": "The IP address of your VOOL device",
+                    "port": "Default Modbus TCP port is 502",
+                    "slave_id": "Modbus slave ID (usually 1)",
+                    "name": "A friendly name for this device"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to the device. Please check the IP address and ensure the device is online.",
+            "unknown": "An unexpected error occurred."
+        },
+        "abort": {
+            "already_configured": "This device is already configured."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "VOOL Modbus Options",
+                "description": "Configure connection options for your VOOL device.",
+                "data": {
+                    "port": "Modbus TCP Port",
+                    "slave_id": "Modbus Slave ID"
+                }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "charger_state": {
+                "name": "Charger State",
+                "state": {
+                    "unknown": "Unknown",
+                    "not_connected": "Not Connected",
+                    "connected_waiting": "Connected, Waiting",
+                    "connected_auth_required": "Authorization Required",
+                    "connected_authorized": "Authorized",
+                    "charging": "Charging",
+                    "charging_complete": "Charging Complete",
+                    "error": "Error",
+                    "suspended_ev": "Suspended (EV)",
+                    "suspended_evse": "Suspended (EVSE)",
+                    "updating": "Updating"
+                }
+            },
+            "active_power": {
+                "name": "Active Power"
+            },
+            "current_l1": {
+                "name": "Current L1"
+            },
+            "current_l2": {
+                "name": "Current L2"
+            },
+            "current_l3": {
+                "name": "Current L3"
+            },
+            "voltage_l1": {
+                "name": "Voltage L1"
+            },
+            "voltage_l2": {
+                "name": "Voltage L2"
+            },
+            "voltage_l3": {
+                "name": "Voltage L3"
+            },
+            "session_energy": {
+                "name": "Session Energy"
+            },
+            "session_time": {
+                "name": "Session Time"
+            },
+            "total_energy": {
+                "name": "Total Energy"
+            },
+            "last_session_energy": {
+                "name": "Last Session Energy"
+            },
+            "temperature": {
+                "name": "Temperature"
+            },
+            "ground_fault_current": {
+                "name": "Ground Fault Current"
+            },
+            "max_available_current": {
+                "name": "Max Available Current"
+            },
+            "charger_current_limit": {
+                "name": "Charger Current Limit"
+            },
+            "number_of_phases": {
+                "name": "Active Phases"
+            },
+            "remaining_time": {
+                "name": "Remaining Time to Full"
+            },
+            "power_factor": {
+                "name": "Power Factor"
+            },
+            "error_code": {
+                "name": "Error Code"
+            },
+            "warning_code": {
+                "name": "Warning Code"
+            }
+        },
+        "binary_sensor": {
+            "connected": {
+                "name": "Vehicle Connected"
+            },
+            "charging": {
+                "name": "Charging"
+            },
+            "contactor_closed": {
+                "name": "Contactor Closed"
+            },
+            "error": {
+                "name": "Error"
+            }
+        },
+        "switch": {
+            "charging_enabled": {
+                "name": "Charging Enabled"
+            },
+            "solar_mode": {
+                "name": "Solar Mode"
+            }
+        },
+        "number": {
+            "current_limit": {
+                "name": "Current Limit"
+            },
+            "led_brightness": {
+                "name": "LED Brightness"
+            }
+        },
+        "select": {
+            "operation_mode": {
+                "name": "Operation Mode"
+            },
+            "phases": {
+                "name": "Phases to Use"
+            }
+        },
+        "button": {
+            "start_charge": {
+                "name": "Start Charging"
+            },
+            "stop_charge": {
+                "name": "Stop Charging"
+            },
+            "reset_energy": {
+                "name": "Reset Energy Counter"
+            }
+        }
+    }
+}

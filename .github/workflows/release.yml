@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Create Release Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create release zip
+        run: |
+          cd custom_components/vool_modbus
+          zip -r ../../vool_modbus.zip .
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./vool_modbus.zip
+          asset_name: vool_modbus.zip
+          asset_content_type: application/zip
