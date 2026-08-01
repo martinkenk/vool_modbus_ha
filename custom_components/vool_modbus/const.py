@@ -54,14 +54,42 @@ PHASES_L1: Final = 0b001  # 1
 PHASES_L1_L2: Final = 0b011  # 3
 PHASES_L1_L2_L3: Final = 0b111  # 7
 
-# Charger States (register 100)
-# These are example states - actual values may vary based on device firmware
-CHARGER_STATE_MAP: Final = {
-    0: "Unknown",
-    1: "Not Connected",
-    2: "Connected",
-    3: "Charging",
-    4: "Charging Paused",
-    5: "Error",
-    6: "Charging Complete",
+# Charger states (register 100)
+# VOOL Modbus Interface Manual 25.11.2025, firmware v1.9.40.
+CHARGER_STATE_UNDEFINED: Final = 0
+CHARGER_STATE_AVAILABLE: Final = 1
+CHARGER_STATE_PREPARING: Final = 2
+CHARGER_STATE_CHARGING: Final = 3
+CHARGER_STATE_SUSPENDED_EV: Final = 4
+CHARGER_STATE_SUSPENDED_EVSE: Final = 5
+CHARGER_STATE_FINISHING: Final = 6
+CHARGER_STATE_RESERVED: Final = 7
+CHARGER_STATE_UNAVAILABLE: Final = 8
+CHARGER_STATE_FAULTED: Final = 9
+CHARGER_STATE_STARTING_CHARGING: Final = 10
+
+CHARGER_STATE_MAP: Final[dict[int, str]] = {
+    CHARGER_STATE_UNDEFINED: "Undefined",
+    CHARGER_STATE_AVAILABLE: "Available",
+    CHARGER_STATE_PREPARING: "Preparing",
+    CHARGER_STATE_CHARGING: "Charging",
+    CHARGER_STATE_SUSPENDED_EV: "Suspended by EV",
+    CHARGER_STATE_SUSPENDED_EVSE: "Suspended by EVSE",
+    CHARGER_STATE_FINISHING: "Finishing",
+    CHARGER_STATE_RESERVED: "Reserved",
+    CHARGER_STATE_UNAVAILABLE: "Unavailable",
+    CHARGER_STATE_FAULTED: "Faulted",
+    CHARGER_STATE_STARTING_CHARGING: "Starting Charging",
 }
+
+# These states imply that a charging cable/vehicle is present.
+CHARGER_CONNECTED_STATES: Final[frozenset[int]] = frozenset(
+    {
+        CHARGER_STATE_PREPARING,
+        CHARGER_STATE_CHARGING,
+        CHARGER_STATE_SUSPENDED_EV,
+        CHARGER_STATE_SUSPENDED_EVSE,
+        CHARGER_STATE_FINISHING,
+        CHARGER_STATE_STARTING_CHARGING,
+    }
+)
