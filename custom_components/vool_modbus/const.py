@@ -10,6 +10,9 @@ CONF_SLAVE_ID: Final = "slave_id"
 
 # Device Types
 DEVICE_TYPE_CHARGER: Final = "charger"
+DEVICE_TYPE_LMC: Final = "lmc"
+
+DEVICE_TYPES: Final = [DEVICE_TYPE_CHARGER, DEVICE_TYPE_LMC]
 
 # Default values
 DEFAULT_MODBUS_PORT: Final = 502
@@ -65,3 +68,29 @@ CHARGER_STATE_MAP: Final = {
     5: "Error",
     6: "Charging Complete",
 }
+
+# =============================================================================
+# VOOL LMC (Load Management Controller) Modbus Register Addresses
+#
+# The LMC is a different product from the single "charger" above and uses a
+# completely different map, per the official "VOOL LMC — Modbus TCP Register
+# Map" (document revision 1.0, July 2026, applies to LMC software v6.4.0+):
+# every value is a 32-bit float32 pair, addressed as register = param# * 2,
+# big-endian word order (high word at the lower register address). Reads
+# outside a documented region return Modbus exception 02 (Illegal Data
+# Address) -- register 100, which the charger map above uses for state, falls
+# in that gap on the LMC and is NOT valid there.
+#
+# Only the read-only mains measurement region (params 300-312, registers
+# 600-625) is implemented here for now. Registers 606-619 are reserved gaps
+# within that region and read back as 0.0.
+# =============================================================================
+REG_LMC_MEASUREMENTS_BASE: Final = 600   # FC03/FC04, read this many regs from here
+REG_LMC_MEASUREMENTS_COUNT: Final = 26   # covers 600-625 inclusive in one request
+
+REG_LMC_MAINS_CURRENT_L1: Final = 600    # float32, A (param 300)
+REG_LMC_MAINS_CURRENT_L2: Final = 602    # float32, A (param 301)
+REG_LMC_MAINS_CURRENT_L3: Final = 604    # float32, A (param 302)
+REG_LMC_MAINS_VOLTAGE_L1: Final = 620    # float32, V (param 310)
+REG_LMC_MAINS_VOLTAGE_L2: Final = 622    # float32, V (param 311)
+REG_LMC_MAINS_VOLTAGE_L3: Final = 624    # float32, V (param 312)

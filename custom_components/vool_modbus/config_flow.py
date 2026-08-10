@@ -18,9 +18,12 @@ from .const import (
     CONF_DEVICE_TYPE,
     CONF_SLAVE_ID,
     DEVICE_TYPE_CHARGER,
+    DEVICE_TYPE_LMC,
+    DEVICE_TYPES,
     DEFAULT_MODBUS_PORT,
     DEFAULT_SLAVE_ID,
     REG_CHARGER_STATE,
+    REG_LMC_MEASUREMENTS_BASE,
 )
 
 from .pymodbus_compat import async_read_holding_registers
@@ -47,13 +50,19 @@ async def validate_connection(hass: HomeAssistant, data: dict[str, Any]) -> dict
         connected = await client.connect()
         if not connected:
             raise CannotConnect("Failed to connect to Modbus device")
-        
-        # Try to read register 100 (state) to verify communication
-        # Both charger and LMC use the same register addresses (100-111)
-        result = await async_read_holding_registers(client, REG_CHARGER_STATE, 1, slave_id)
+
+        # Charger and LMC use different register maps (see const.py) -- validate
+        # against a region that's actually documented for the selected device type.
+        if device_type == DEVICE_TYPE_LMC:
+            validation_address = REG_LMC_MEASUREMENTS_BASE
+            result = await async_read_holding_registers(client, validation_address, 2, slave_id)
+        else:
+            validation_address = REG_CHARGER_STATE
+            result = await async_read_holding_registers(client, validation_address, 1, slave_id)
+
         if result.isError():
-            raise CannotConnect(f"Failed to read from {device_type} at address {REG_CHARGER_STATE}")
-            
+            raise CannotConnect(f"Failed to read from {device_type} at address {validation_address}")
+
     except Exception as err:
         _LOGGER.error("Connection error: %s", err)
         raise CannotConnect(f"Connection failed: {err}") from err
@@ -75,10 +84,27 @@ class VoolModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step - go directly to connection step."""
-        # Set device type to charger (only supported device type)
-        self._data[CONF_DEVICE_TYPE] = DEVICE_TYPE_CHARGER
-        return await self.async_step_connection()
+        """Handle the initial step - ask which VOOL device type this is."""
+        if user_input is not None:
+            self._data[CONF_DEVICE_TYPE] = user_input[CONF_DEVICE_TYPE]
+            return await self.async_step_connection()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_DEVICE_TYPE, default=DEVICE_TYPE_CHARGER
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=DEVICE_TYPES,
+                            translation_key=CONF_DEVICE_TYPE,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        ),
+                    ),
+                }
+            ),
+        )
 
     async def async_step_connection(
         self, user_input: dict[str, Any] | None = None

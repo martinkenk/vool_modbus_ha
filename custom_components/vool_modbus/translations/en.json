@@ -45,6 +45,14 @@
             }
         }
     },
+    "selector": {
+        "device_type": {
+            "options": {
+                "charger": "Charger",
+                "lmc": "LMC (Load Management Controller)"
+            }
+        }
+    },
     "entity": {
         "sensor": {
             "charger_state": {
@@ -127,6 +135,36 @@
             },
             "external_current_limit": {
                 "name": "External Current Limit"
+            },
+            "mains_current_l1": {
+                "name": "Mains Current L1"
+            },
+            "mains_current_l2": {
+                "name": "Mains Current L2"
+            },
+            "mains_current_l3": {
+                "name": "Mains Current L3"
+            },
+            "mains_voltage_l1": {
+                "name": "Mains Voltage L1"
+            },
+            "mains_voltage_l2": {
+                "name": "Mains Voltage L2"
+            },
+            "mains_voltage_l3": {
+                "name": "Mains Voltage L3"
+            },
+            "mains_power_l1": {
+                "name": "Mains Power L1"
+            },
+            "mains_power_l2": {
+                "name": "Mains Power L2"
+            },
+            "mains_power_l3": {
+                "name": "Mains Power L3"
+            },
+            "mains_power_total": {
+                "name": "Mains Power Total"
             }
         },
         "binary_sensor": {
