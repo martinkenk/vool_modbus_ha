@@ -10,7 +10,7 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -82,6 +82,7 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.port = int(entry.data.get(CONF_PORT, DEFAULT_MODBUS_PORT))
         self.slave_id = int(entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID))
         self.device_type = entry.data.get(CONF_DEVICE_TYPE, DEVICE_TYPE_CHARGER)
+        self.scan_interval = int(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
         self._client: AsyncModbusTcpClient | None = None
         self._connected = False
 
@@ -89,7 +90,7 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.entry_id}",
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=self.scan_interval),
         )
 
     async def _ensure_connected(self) -> bool:

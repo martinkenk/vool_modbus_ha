@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
@@ -22,6 +22,7 @@ from .const import (
     DEVICE_TYPES,
     DEFAULT_MODBUS_PORT,
     DEFAULT_SLAVE_ID,
+    DEFAULT_SCAN_INTERVAL,
     REG_CHARGER_STATE,
     REG_LMC_MEASUREMENTS_BASE,
 )
@@ -197,11 +198,14 @@ class VoolModbusOptionsFlowHandler(config_entries.OptionsFlow):
                 cleaned[CONF_PORT] = int(cleaned[CONF_PORT])
             if CONF_SLAVE_ID in cleaned and cleaned[CONF_SLAVE_ID] is not None:
                 cleaned[CONF_SLAVE_ID] = int(cleaned[CONF_SLAVE_ID])
+            if CONF_SCAN_INTERVAL in cleaned and cleaned[CONF_SCAN_INTERVAL] is not None:
+                cleaned[CONF_SCAN_INTERVAL] = int(cleaned[CONF_SCAN_INTERVAL])
             return self.async_create_entry(title="", data=cleaned)
 
         current_port = self.config_entry.data.get(CONF_PORT, DEFAULT_MODBUS_PORT)
         current_slave_id = self.config_entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)
-        
+        current_scan_interval = self.config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -224,6 +228,17 @@ class VoolModbusOptionsFlowHandler(config_entries.OptionsFlow):
                             min=1,
                             max=247,
                             mode=selector.NumberSelectorMode.BOX,
+                        ),
+                    ),
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL,
+                        default=current_scan_interval,
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=5,
+                            max=3600,
+                            mode=selector.NumberSelectorMode.BOX,
+                            unit_of_measurement="s",
                         ),
                     ),
                 }
