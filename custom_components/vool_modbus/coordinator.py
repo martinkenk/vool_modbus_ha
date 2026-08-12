@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import struct
 from datetime import timedelta
 from typing import Any
 
@@ -9,7 +10,7 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -18,6 +19,7 @@ from .const import (
     CONF_DEVICE_TYPE,
     CONF_SLAVE_ID,
     DEVICE_TYPE_CHARGER,
+    DEVICE_TYPE_LMC,
     DEFAULT_MODBUS_PORT,
     DEFAULT_SLAVE_ID,
     DEFAULT_SCAN_INTERVAL,
@@ -38,6 +40,15 @@ from .const import (
     REG_ENERGY_IMPORTED,
     # Control registers
     REG_CHARGING_COMMAND,
+    # LMC measurement registers (600-625)
+    REG_LMC_MEASUREMENTS_BASE,
+    REG_LMC_MEASUREMENTS_COUNT,
+    REG_LMC_MAINS_CURRENT_L1,
+    REG_LMC_MAINS_CURRENT_L2,
+    REG_LMC_MAINS_CURRENT_L3,
+    REG_LMC_MAINS_VOLTAGE_L1,
+    REG_LMC_MAINS_VOLTAGE_L2,
+    REG_LMC_MAINS_VOLTAGE_L3,
 )
 
 from .pymodbus_compat import (
@@ -55,6 +66,12 @@ def _signed16(value: int) -> int:
     return value
 
 
+def _decode_float32(registers: list[int], offset: int) -> float:
+    """Decode a big-endian float32 from a register pair (LMC map, high word first)."""
+    hi, lo = registers[offset], registers[offset + 1]
+    return struct.unpack(">f", struct.pack(">HH", hi, lo))[0]
+
+
 class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to manage data updates from VOOL device."""
 
@@ -65,6 +82,7 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.port = int(entry.data.get(CONF_PORT, DEFAULT_MODBUS_PORT))
         self.slave_id = int(entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID))
         self.device_type = entry.data.get(CONF_DEVICE_TYPE, DEVICE_TYPE_CHARGER)
+        self.scan_interval = int(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
         self._client: AsyncModbusTcpClient | None = None
         self._connected = False
 
@@ -72,7 +90,7 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.entry_id}",
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=self.scan_interval),
         )
 
     async def _ensure_connected(self) -> bool:
@@ -99,6 +117,9 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not await self._ensure_connected():
                 raise UpdateFailed("Failed to connect to Modbus device")
 
+            if self.device_type == DEVICE_TYPE_LMC:
+                return await self._read_lmc_data()
+
             data: dict[str, Any] = {}
             data = await self._read_charger_data()
             data.update(await self._read_charger_holding_registers())
@@ -111,6 +132,45 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception as err:
             self._connected = False
             raise UpdateFailed(f"Error communicating with device: {err}") from err
+
+    async def _read_lmc_data(self) -> dict[str, Any]:
+        """Read LMC mains measurements (registers 600-625, float32 pairs, read-only).
+
+        Power isn't a register the LMC exposes -- only per-phase current and
+        voltage -- so total/per-phase power here is computed client-side
+        (V * I per phase, unity power factor assumed) rather than read from
+        the device.
+        """
+        data: dict[str, Any] = {}
+
+        result = await async_read_holding_registers(
+            self._client, REG_LMC_MEASUREMENTS_BASE, REG_LMC_MEASUREMENTS_COUNT, self.slave_id
+        )
+
+        if result.isError():
+            raise UpdateFailed(f"Error reading LMC measurements: {result}")
+
+        regs = result.registers
+        base = REG_LMC_MEASUREMENTS_BASE
+
+        def reg(address: int) -> float:
+            return _decode_float32(regs, address - base)
+
+        data["mains_current_l1"] = reg(REG_LMC_MAINS_CURRENT_L1)
+        data["mains_current_l2"] = reg(REG_LMC_MAINS_CURRENT_L2)
+        data["mains_current_l3"] = reg(REG_LMC_MAINS_CURRENT_L3)
+        data["mains_voltage_l1"] = reg(REG_LMC_MAINS_VOLTAGE_L1)
+        data["mains_voltage_l2"] = reg(REG_LMC_MAINS_VOLTAGE_L2)
+        data["mains_voltage_l3"] = reg(REG_LMC_MAINS_VOLTAGE_L3)
+
+        data["mains_power_l1"] = data["mains_current_l1"] * data["mains_voltage_l1"]
+        data["mains_power_l2"] = data["mains_current_l2"] * data["mains_voltage_l2"]
+        data["mains_power_l3"] = data["mains_current_l3"] * data["mains_voltage_l3"]
+        data["mains_power_total"] = (
+            data["mains_power_l1"] + data["mains_power_l2"] + data["mains_power_l3"]
+        )
+
+        return data
 
     async def _read_charger_data(self) -> dict[str, Any]:
         """Read charger status registers (100-111) - all are holding registers."""
@@ -211,6 +271,6 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "identifiers": {(DOMAIN, f"{self.host}_{self.slave_id}")},
             "name": self.entry.title,
             "manufacturer": "VOOL",
-            "model": "Charger",
+            "model": "LMC" if self.device_type == DEVICE_TYPE_LMC else "Charger",
             "configuration_url": f"http://{self.host}",
         }

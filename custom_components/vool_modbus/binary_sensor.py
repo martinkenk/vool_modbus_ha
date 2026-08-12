@@ -13,7 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, DEVICE_TYPE_LMC
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
 
@@ -60,6 +60,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up VOOL Modbus binary sensors."""
     coordinator: VoolModbusCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # These all derive from the charger's state register, which doesn't exist on the LMC.
+    if coordinator.device_type == DEVICE_TYPE_LMC:
+        return
 
     async_add_entities(
         VoolBinarySensor(coordinator, description)

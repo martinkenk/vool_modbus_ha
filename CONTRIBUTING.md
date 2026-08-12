@@ -6,7 +6,7 @@ Thank you for considering contributing to the VOOL Modbus integration! This docu
 
 ### Reporting Bugs
 
-1. Check if the issue has already been reported in the [Issues](https://github.com/martinkenk/vool-modbus-ha/issues)
+1. Check if the issue has already been reported in the [Issues](https://github.com/martinkenk/vool_modbus_ha/issues)
 2. If not, create a new issue with:
    - A clear, descriptive title
    - Steps to reproduce the problem
@@ -35,7 +35,7 @@ Thank you for considering contributing to the VOOL Modbus integration! This docu
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/martinkenk/vool-modbus-ha.git
+   git clone https://github.com/martinkenk/vool_modbus_ha.git
    cd vool-modbus-ha
    ```
 

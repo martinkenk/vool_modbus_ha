@@ -23,6 +23,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     DOMAIN,
     CHARGER_STATE_MAP,
+    DEVICE_TYPE_LMC,
 )
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
@@ -150,6 +151,99 @@ CHARGER_SENSORS: tuple[VoolSensorEntityDescription, ...] = (
 )
 
 
+# =============================================================================
+# LMC Sensors (based on the official LMC register map, mains region 600-625)
+#
+# The LMC exposes only per-phase current and voltage -- no power or energy
+# register -- so power here is computed client-side (V * I, unity power
+# factor assumed) rather than read from the device. To use this in the HA
+# Energy dashboard, add an "Integration - Riemann sum integral" helper on
+# top of mains_power_total to derive a cumulative kWh sensor.
+# =============================================================================
+LMC_SENSORS: tuple[VoolSensorEntityDescription, ...] = (
+    VoolSensorEntityDescription(
+        key="mains_current_l1",
+        translation_key="mains_current_l1",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_current_l1"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_current_l2",
+        translation_key="mains_current_l2",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_current_l2"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_current_l3",
+        translation_key="mains_current_l3",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_current_l3"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_voltage_l1",
+        translation_key="mains_voltage_l1",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_voltage_l1"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_voltage_l2",
+        translation_key="mains_voltage_l2",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_voltage_l2"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_voltage_l3",
+        translation_key="mains_voltage_l3",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_voltage_l3"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_power_l1",
+        translation_key="mains_power_l1",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_power_l1"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_power_l2",
+        translation_key="mains_power_l2",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_power_l2"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_power_l3",
+        translation_key="mains_power_l3",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_power_l3"),
+    ),
+    VoolSensorEntityDescription(
+        key="mains_power_total",
+        translation_key="mains_power_total",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("mains_power_total"),
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -158,9 +252,11 @@ async def async_setup_entry(
     """Set up VOOL Modbus sensors."""
     coordinator: VoolModbusCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    descriptions = LMC_SENSORS if coordinator.device_type == DEVICE_TYPE_LMC else CHARGER_SENSORS
+
     async_add_entities(
         VoolSensor(coordinator, description)
-        for description in CHARGER_SENSORS
+        for description in descriptions
     )
 
 

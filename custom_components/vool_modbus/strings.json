@@ -40,8 +40,20 @@
                 "description": "Configure connection options for your VOOL device.",
                 "data": {
                     "port": "Modbus TCP Port",
-                    "slave_id": "Modbus Slave ID"
+                    "slave_id": "Modbus Slave ID",
+                    "scan_interval": "Scan Interval"
+                },
+                "data_description": {
+                    "scan_interval": "How often to poll the device, in seconds (minimum 5)"
                 }
+            }
+        }
+    },
+    "selector": {
+        "device_type": {
+            "options": {
+                "charger": "Charger",
+                "lmc": "LMC (Load Management Controller)"
             }
         }
     },
@@ -122,6 +134,36 @@
             },
             "warning_code": {
                 "name": "Warning Code"
+            },
+            "mains_current_l1": {
+                "name": "Mains Current L1"
+            },
+            "mains_current_l2": {
+                "name": "Mains Current L2"
+            },
+            "mains_current_l3": {
+                "name": "Mains Current L3"
+            },
+            "mains_voltage_l1": {
+                "name": "Mains Voltage L1"
+            },
+            "mains_voltage_l2": {
+                "name": "Mains Voltage L2"
+            },
+            "mains_voltage_l3": {
+                "name": "Mains Voltage L3"
+            },
+            "mains_power_l1": {
+                "name": "Mains Power L1"
+            },
+            "mains_power_l2": {
+                "name": "Mains Power L2"
+            },
+            "mains_power_l3": {
+                "name": "Mains Power L3"
+            },
+            "mains_power_total": {
+                "name": "Mains Power Total"
             }
         },
         "binary_sensor": {
