@@ -13,7 +13,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import (
+    CHARGER_CONNECTED_STATES,
+    CHARGER_STATE_AVAILABLE,
+    CHARGER_STATE_CHARGING,
+    CHARGER_STATE_FAULTED,
+    DOMAIN,
+)
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
 
@@ -25,30 +31,57 @@ class VoolBinarySensorEntityDescription(BinarySensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], bool | None]
 
 
-# Charger states based on register 100:
-# The exact state values may need adjustment based on actual device behavior
-# Common states: 1=NotConnected, 2=Connected, 3=Charging, 4=Paused, 5=Error
+def _vehicle_connected(data: dict[str, Any]) -> bool | None:
+    """Return whether the charger state confirms vehicle presence."""
+    charger_state = data.get("charger_state")
+
+    if charger_state in CHARGER_CONNECTED_STATES:
+        return True
+
+    if charger_state == CHARGER_STATE_AVAILABLE:
+        return False
+
+    # Undefined, Reserved, Unavailable and Faulted do not reliably indicate
+    # whether a vehicle is physically connected.
+    return None
+
+
+def _charger_state_is(
+    data: dict[str, Any],
+    expected_state: int,
+) -> bool | None:
+    """Return whether the charger is in the expected state."""
+    charger_state = data.get("charger_state")
+    if charger_state is None:
+        return None
+
+    return charger_state == expected_state
+
+
 CHARGER_BINARY_SENSORS: tuple[VoolBinarySensorEntityDescription, ...] = (
     VoolBinarySensorEntityDescription(
         key="connected",
         translation_key="connected",
         device_class=BinarySensorDeviceClass.PLUG,
-        # Connected when state >= 2 (anything except "Not Connected")
-        value_fn=lambda data: data.get("charger_state", 0) >= 2,
+        value_fn=_vehicle_connected,
     ),
     VoolBinarySensorEntityDescription(
         key="charging",
         translation_key="charging",
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
-        # Charging when state == 3
-        value_fn=lambda data: data.get("charger_state", 0) == 3,
+        value_fn=lambda data: _charger_state_is(
+            data,
+            CHARGER_STATE_CHARGING,
+        ),
     ),
     VoolBinarySensorEntityDescription(
         key="error",
         translation_key="error",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        # Error when state == 5
-        value_fn=lambda data: data.get("charger_state", 0) == 5,
+        value_fn=lambda data: _charger_state_is(
+            data,
+            CHARGER_STATE_FAULTED,
+        ),
     ),
 )
 
