@@ -1,6 +1,7 @@
 """Data coordinator for VOOL Modbus integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import Any
@@ -66,7 +67,9 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.slave_id = int(entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID))
         self.device_type = entry.data.get(CONF_DEVICE_TYPE, DEVICE_TYPE_CHARGER)
         self._client: AsyncModbusTcpClient | None = None
-        self._connected = False
+        # Serialises connect + IO across scheduled polls and user-triggered
+        # writes so the two paths cannot interleave or build two clients.
+        self._io_lock = asyncio.Lock()
 
         super().__init__(
             hass,
@@ -77,40 +80,56 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _ensure_connected(self) -> bool:
         """Ensure we are connected to the Modbus device."""
-        if self._client is None or not self._connected:
-            self._client = AsyncModbusTcpClient(
-                host=self.host,
-                port=self.port,
-                timeout=10,
-            )
-            self._connected = await self._client.connect()
-        return self._connected
+        if self._client is not None and self._client.connected:
+            return True
+
+        # Close any stale client before replacing it so we don't leak a TCP
+        # socket to the charger (which only accepts a small number of
+        # concurrent connections).
+        await self._async_close_client()
+
+        self._client = AsyncModbusTcpClient(
+            host=self.host,
+            port=self.port,
+            timeout=10,
+        )
+        return await self._client.connect()
+
+    async def _async_close_client(self) -> None:
+        """Close the current Modbus client, if any, and drop the reference."""
+        if self._client is None:
+            return
+        try:
+            self._client.close()
+        except Exception as err:  # noqa: BLE001 - best-effort cleanup
+            _LOGGER.debug("Error closing Modbus client: %s", err)
+        finally:
+            self._client = None
 
     async def async_close(self) -> None:
         """Close the Modbus connection."""
-        if self._client is not None:
-            self._client.close()
-            self._client = None
-            self._connected = False
+        await self._async_close_client()
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from the VOOL device."""
-        try:
-            if not await self._ensure_connected():
-                raise UpdateFailed("Failed to connect to Modbus device")
+        async with self._io_lock:
+            try:
+                if not await self._ensure_connected():
+                    await self._async_close_client()
+                    raise UpdateFailed("Failed to connect to Modbus device")
 
-            data: dict[str, Any] = {}
-            data = await self._read_charger_data()
-            data.update(await self._read_charger_holding_registers())
+                data: dict[str, Any] = {}
+                data = await self._read_charger_data()
+                data.update(await self._read_charger_holding_registers())
 
-            return data
+                return data
 
-        except ModbusException as err:
-            self._connected = False
-            raise UpdateFailed(f"Modbus error: {err}") from err
-        except Exception as err:
-            self._connected = False
-            raise UpdateFailed(f"Error communicating with device: {err}") from err
+            except ModbusException as err:
+                await self._async_close_client()
+                raise UpdateFailed(f"Modbus error: {err}") from err
+            except Exception as err:
+                await self._async_close_client()
+                raise UpdateFailed(f"Error communicating with device: {err}") from err
 
     async def _read_charger_data(self) -> dict[str, Any]:
         """Read charger status registers (100-111) - all are holding registers."""
@@ -187,21 +206,26 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def async_write_register(self, address: int, value: int) -> bool:
         """Write a value to a holding register."""
         try:
-            if not await self._ensure_connected():
-                raise UpdateFailed("Failed to connect to Modbus device")
+            async with self._io_lock:
+                if not await self._ensure_connected():
+                    await self._async_close_client()
+                    raise UpdateFailed("Failed to connect to Modbus device")
 
-            result = await async_write_register(self._client, address, value, self.slave_id)
-            
-            if result.isError():
-                _LOGGER.error("Error writing register %s: %s", address, result)
-                return False
-            
-            # Trigger a data refresh
+                result = await async_write_register(self._client, address, value, self.slave_id)
+
+                if result.isError():
+                    _LOGGER.error("Error writing register %s: %s", address, result)
+                    return False
+
+            # Trigger a data refresh outside the lock so the refresh's own
+            # acquisition does not deadlock.
             await self.async_request_refresh()
             return True
 
         except Exception as err:
             _LOGGER.error("Error writing to Modbus device: %s", err)
+            async with self._io_lock:
+                await self._async_close_client()
             return False
 
     @property
