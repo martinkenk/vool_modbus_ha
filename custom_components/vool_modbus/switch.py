@@ -10,12 +10,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    DEVICE_TYPE_LMC,
     DOMAIN,
     REG_CHARGING_COMMAND,
 )
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
-
 
 # Charging command values per spec
 CHARGING_CMD_START = 1
@@ -52,6 +52,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up VOOL Modbus switches."""
     coordinator: VoolModbusCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # LMC support here is read-only for now -- these registers are charger-only.
+    if coordinator.device_type == DEVICE_TYPE_LMC:
+        return
 
     async_add_entities(
         VoolSwitch(coordinator, description)

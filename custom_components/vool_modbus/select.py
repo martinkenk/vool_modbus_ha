@@ -9,15 +9,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    DEVICE_TYPE_LMC,
     DOMAIN,
-    REG_EXTERNAL_ALLOWED_PHASES,
     PHASES_L1,
     PHASES_L1_L2,
     PHASES_L1_L2_L3,
+    REG_EXTERNAL_ALLOWED_PHASES,
 )
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
-
 
 # Phase options mapping (binary representation)
 PHASES_MAP: dict[int, str] = {
@@ -60,6 +60,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up VOOL Modbus selects."""
     coordinator: VoolModbusCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # LMC support here is read-only for now -- these registers are charger-only.
+    if coordinator.device_type == DEVICE_TYPE_LMC:
+        return
 
     async_add_entities(
         VoolSelect(coordinator, description)

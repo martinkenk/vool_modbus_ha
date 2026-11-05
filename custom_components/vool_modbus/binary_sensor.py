@@ -1,8 +1,9 @@
 """Binary sensor platform for VOOL Modbus integration."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -18,6 +19,7 @@ from .const import (
     CHARGER_STATE_AVAILABLE,
     CHARGER_STATE_CHARGING,
     CHARGER_STATE_FAULTED,
+    DEVICE_TYPE_LMC,
     DOMAIN,
 )
 from .coordinator import VoolModbusCoordinator
@@ -93,6 +95,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up VOOL Modbus binary sensors."""
     coordinator: VoolModbusCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # These all derive from the charger's state register, which doesn't exist on the LMC.
+    if coordinator.device_type == DEVICE_TYPE_LMC:
+        return
 
     async_add_entities(
         VoolBinarySensor(coordinator, description)
