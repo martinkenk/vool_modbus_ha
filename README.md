@@ -1,14 +1,11 @@
 # VOOL Modbus Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![License](https://img.shields.io/github/license/Mactomik/vool_modbus_ha.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/release/martinkenk/vool_modbus_ha.svg)](https://github.com/martinkenk/vool_modbus_ha/releases)
+[![License](https://img.shields.io/github/license/martinkenk/vool_modbus_ha.svg)](LICENSE)
 
-A Home Assistant custom integration for VOOL EV Chargers via Modbus TCP.
-
-> **This is a fork** of [martinkenk/vool_modbus_ha](https://github.com/martinkenk/vool_modbus_ha), which only
-> supports the individual VOOL charger. This fork adds support for the **VOOL LMC (Load Management
-> Controller)**, a different product with its own Modbus register map. See
-> [Changes in this fork](#changes-in-this-fork) below for details.
+A Home Assistant custom integration for VOOL EV Chargers and the VOOL LMC (Load Management Controller)
+via Modbus TCP. LMC support requires software v6.4.0 or later and is read-only.
 
 ![VOOL Logo](images/logo.png)
 
@@ -17,7 +14,7 @@ A Home Assistant custom integration for VOOL EV Chargers via Modbus TCP.
 - **Real-time monitoring**: Power, current, voltage (per phase), energy consumption
 - **Status monitoring**: Charger state, requested phases, vehicle connection status
 - **Full control**: Start/stop charging, set external current limits, configure allowed phases
-- **LMC support (this fork, read-only)**: Per-phase mains current, voltage, and computed power
+- **LMC support (read-only)**: Per-phase mains current, voltage, and computed apparent power
 
 ## Installation
 
@@ -25,7 +22,7 @@ A Home Assistant custom integration for VOOL EV Chargers via Modbus TCP.
 
 1. Ensure you have [HACS](https://hacs.xyz/) installed
 2. Go to HACS → Integrations → ⋮ (menu) → Custom repositories
-3. Add this repository URL: `https://github.com/Mactomik/vool_modbus_ha`
+3. Add this repository URL: `https://github.com/martinkenk/vool_modbus_ha`
 4. Select category: **Integration**
 5. Click **Add**
 6. Search for "VOOL Modbus" in HACS and install it
@@ -92,34 +89,27 @@ After adding a device, click **Configure** on its entry under Settings → Devic
 
 Charger entities above do not appear for LMC devices — the LMC exposes a different register map (see below).
 
-### LMC Sensors (this fork, read-only)
+### LMC Sensors (read-only)
 | Entity | Description | Unit |
 |--------|-------------|------|
 | Mains Current L1/L2/L3 | Per-phase mains current | A |
 | Mains Voltage L1/L2/L3 | Per-phase mains voltage | V |
-| Mains Power L1/L2/L3 | Per-phase power, computed as V × I (unity power factor assumed) | W |
-| Mains Power Total | Sum of the three phases | W |
+| Mains Apparent Power L1/L2/L3 | Per-phase apparent power, computed as V × I | VA |
+| Mains Apparent Power Total | Sum of the three phases' apparent power | VA |
 
-The LMC's Modbus interface has no power or energy register — only current and voltage per phase — so power
-is computed client-side by this integration rather than read from the device. There is currently no write
-support for the LMC (current limit, load management mode, commands); see
-[Changes in this fork](#changes-in-this-fork) for why.
+The LMC's Modbus interface exposes no active power, power factor, or energy register. Apparent power
+is computed client-side rather than read from the device. LMC writes (current limit, load management mode,
+and commands) are not implemented. Keep Modbus write access disabled; it is not needed by this integration.
 
 ## Dashboard
 
 A sample dashboard configuration is included in the `dashboard/` folder. See [Dashboard Setup](dashboard/README.md) for instructions.
 
-## Using LMC Power in the Energy Dashboard
+## LMC Measurements and the Energy Dashboard
 
-The Home Assistant Energy dashboard needs a cumulative kWh sensor, not an instantaneous power reading, so
-`Mains Power Total` (W) can't be added to it directly. Derive an energy sensor from it with a built-in helper:
-
-1. **Settings** → **Devices & Services** → **Helpers** → **+ Add Helper**
-2. Choose **Integration - Riemann sum integral**
-3. **Input sensor**: `Mains Power Total`
-4. **Metric prefix**: `k` (kilo), so the result is in kWh
-5. **Integration method**: `Left Riemann sum`
-6. Save, then add the resulting sensor to the Energy dashboard as an individual device (or as a grid source, depending on what it should represent for you)
+The LMC sensors report apparent power in VA, not active power in W. Integrating apparent power over time
+does not yield active energy in kWh, so these sensors are not suitable for deriving Energy dashboard
+consumption. Use a meter that reports active energy or measured active power instead.
 
 ## Troubleshooting
 
@@ -146,41 +136,12 @@ The Home Assistant Energy dashboard needs a cumulative kWh sensor, not an instan
   web interface — it's disabled by default and can only be turned on from there, not over Modbus itself).
 
 ### HACS download fails / "Could not download"
-- If you're on a fork with no published GitHub Release, make sure `hacs.json` does **not** set
-  `"zip_release": true` — that tells HACS to fetch a prebuilt ZIP asset from a release, which fails with no
-  matching release, even for the unmodified upstream commit.
-
-## Changes in this fork
-
-Relative to [martinkenk/vool_modbus_ha](https://github.com/martinkenk/vool_modbus_ha):
-
-- **Added VOOL LMC (Load Management Controller) support**, read-only: mains current/voltage per phase and
-  computed power (`const.py`, `coordinator.py`, `sensor.py`). The LMC is a different product with its own
-  register map (float32 pairs addressed as `register = param# * 2`, per VOOL's official "LMC — Modbus TCP
-  Register Map" doc, rev 1.0, July 2026) — it does **not** share register addresses with the single charger,
-  despite a comment in the original `config_flow.py` claiming otherwise. Reading register 100 (charger state)
-  against an LMC falls outside every documented region and returns a Modbus exception, which is what sent us
-  down this path in the first place.
-- **Wired up the device-type selector** in `config_flow.py` — the strings for a "VOOL Device Type" step
-  already existed in `strings.json`/`translations/en.json`, but `async_step_user` never actually showed the
-  form and hardcoded the charger type.
-- Charger-only entity platforms (`number`, `binary_sensor`, `button`, `select`, `switch`) now skip entity
-  creation for LMC devices instead of creating dead entities against registers that don't exist on that
-  product.
-- LMC write support (current limit, load management mode, factory reset/reboot commands) is intentionally
-  **not** implemented — the LMC spec requires enabling a separate "write enabled" parameter on the device and
-  warns that any host with write access can trigger a reboot or factory reset, so it was left out of this
-  read-only-focused pass.
-- **Made the polling scan interval configurable** via the options flow (5-3600s, was hardcoded to 5s).
-- **Fixed `hacs.json`** (`zip_release: true` pointed HACS at a GitHub Release asset that was never published,
-  so downloads failed even for the unmodified upstream commit) and corrected repo URLs throughout that
-  referenced a nonexistent `martinkenk/vool-modbus-ha` (hyphenated) instead of the actual
-  `martinkenk/vool_modbus_ha`.
+- Published releases include `vool_modbus.zip`, which HACS downloads using the `zip_release` setting.
+- Check that you are using `martinkenk/vool_modbus_ha` and that the selected release contains this asset.
 
 ## Contributing
 
-This fork is maintained for personal use and isn't actively seeking contributions, but the original project's
-[Contributing Guidelines](CONTRIBUTING.md) still apply if you'd like to send a PR.
+See the [Contributing Guidelines](CONTRIBUTING.md) to submit an issue or pull request.
 
 ## License
 
@@ -192,8 +153,4 @@ This integration is not officially affiliated with or endorsed by VOOL. Use at y
 
 ## Support
 
-This is a personal fork; for the original charger-only integration, see
-[martinkenk/vool_modbus_ha](https://github.com/martinkenk/vool_modbus_ha). For issues specific to the LMC
-support added here:
-
-- [Issue Tracker](https://github.com/Mactomik/vool_modbus_ha/issues)
+- [Issue Tracker](https://github.com/martinkenk/vool_modbus_ha/issues)

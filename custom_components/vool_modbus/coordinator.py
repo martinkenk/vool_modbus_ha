@@ -80,8 +80,8 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Initialize the coordinator."""
         self.entry = entry
         self.host = entry.data[CONF_HOST]
-        self.port = int(entry.data.get(CONF_PORT, DEFAULT_MODBUS_PORT))
-        self.slave_id = int(entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID))
+        self.port = int(entry.options.get(CONF_PORT, entry.data.get(CONF_PORT, DEFAULT_MODBUS_PORT)))
+        self.slave_id = int(entry.options.get(CONF_SLAVE_ID, entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)))
         self.device_type = entry.data.get(CONF_DEVICE_TYPE, DEVICE_TYPE_CHARGER)
         self.scan_interval = int(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
         self._client: AsyncModbusTcpClient | None = None
@@ -155,10 +155,8 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _read_lmc_data(self) -> dict[str, Any]:
         """Read LMC mains measurements (registers 600-625, float32 pairs, read-only).
 
-        Power isn't a register the LMC exposes -- only per-phase current and
-        voltage -- so total/per-phase power here is computed client-side
-        (V * I per phase, unity power factor assumed) rather than read from
-        the device.
+        Only current and voltage are exposed. V * I gives apparent power in
+        VA, not active power in W; no power factor or energy is available.
         """
         data: dict[str, Any] = {}
 
