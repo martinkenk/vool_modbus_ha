@@ -5,7 +5,6 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
@@ -14,19 +13,18 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
 from .const import (
-    DOMAIN,
     CONF_DEVICE_TYPE,
     CONF_SLAVE_ID,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SLAVE_ID,
     DEVICE_TYPE_CHARGER,
     DEVICE_TYPE_LMC,
     DEVICE_TYPES,
-    DEFAULT_MODBUS_PORT,
-    DEFAULT_SLAVE_ID,
-    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
     REG_CHARGER_STATE,
     REG_LMC_MEASUREMENTS_BASE,
 )
-
 from .pymodbus_compat import async_read_holding_registers
 
 _LOGGER = logging.getLogger(__name__)

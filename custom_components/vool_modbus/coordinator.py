@@ -7,51 +7,49 @@ import struct
 from datetime import timedelta
 from typing import Any
 
-from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ModbusException
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from pymodbus.client import AsyncModbusTcpClient
+from pymodbus.exceptions import ModbusException
 
 from .const import (
-    DOMAIN,
     CONF_DEVICE_TYPE,
     CONF_SLAVE_ID,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SLAVE_ID,
     DEVICE_TYPE_CHARGER,
     DEVICE_TYPE_LMC,
-    DEFAULT_MODBUS_PORT,
-    DEFAULT_SLAVE_ID,
-    DEFAULT_SCAN_INTERVAL,
-    # Status registers (100-111)
-    REG_CHARGER_STATE,
-    REG_REQUESTED_PHASES,
-    REG_CURRENT_L1,
-    REG_CURRENT_L2,
-    REG_CURRENT_L3,
-    REG_VOLTAGE_L1,
-    REG_VOLTAGE_L2,
-    REG_VOLTAGE_L3,
+    DOMAIN,
     REG_ACTIVE_POWER,
     REG_ACTIVE_POWER_L1,
     REG_ACTIVE_POWER_L2,
     REG_ACTIVE_POWER_L3,
-    # Energy registers
-    REG_ENERGY_IMPORTED,
+    # Status registers (100-111)
+    REG_CHARGER_STATE,
     # Control registers
     REG_CHARGING_COMMAND,
-    # LMC measurement registers (600-625)
-    REG_LMC_MEASUREMENTS_BASE,
-    REG_LMC_MEASUREMENTS_COUNT,
+    REG_CURRENT_L1,
+    REG_CURRENT_L2,
+    REG_CURRENT_L3,
+    # Energy registers
+    REG_ENERGY_IMPORTED,
     REG_LMC_MAINS_CURRENT_L1,
     REG_LMC_MAINS_CURRENT_L2,
     REG_LMC_MAINS_CURRENT_L3,
     REG_LMC_MAINS_VOLTAGE_L1,
     REG_LMC_MAINS_VOLTAGE_L2,
     REG_LMC_MAINS_VOLTAGE_L3,
+    # LMC measurement registers (600-625)
+    REG_LMC_MEASUREMENTS_BASE,
+    REG_LMC_MEASUREMENTS_COUNT,
+    REG_REQUESTED_PHASES,
+    REG_VOLTAGE_L1,
+    REG_VOLTAGE_L2,
+    REG_VOLTAGE_L3,
 )
-
 from .pymodbus_compat import (
     async_read_holding_registers,
     async_write_register,
@@ -280,8 +278,8 @@ class VoolModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.async_request_refresh()
             return True
 
-        except Exception as err:
-            _LOGGER.error("Error writing to Modbus device: %s", err)
+        except Exception:
+            _LOGGER.exception("Error writing to Modbus device")
             async with self._io_lock:
                 await self._async_close_client()
             return False

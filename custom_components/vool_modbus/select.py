@@ -9,16 +9,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    DOMAIN,
     DEVICE_TYPE_LMC,
-    REG_EXTERNAL_ALLOWED_PHASES,
+    DOMAIN,
     PHASES_L1,
     PHASES_L1_L2,
     PHASES_L1_L2_L3,
+    REG_EXTERNAL_ALLOWED_PHASES,
 )
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
-
 
 # Phase options mapping (binary representation)
 PHASES_MAP: dict[int, str] = {

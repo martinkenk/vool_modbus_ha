@@ -67,4 +67,4 @@ jobs:
         run: pip install -r requirements_dev.txt
 
       - name: Run tests
-        run: pytest -q tests/ --asyncio-mode=auto
+        run: python -m pytest -q tests/ --asyncio-mode=auto

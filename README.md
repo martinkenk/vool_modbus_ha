@@ -7,8 +7,6 @@
 A Home Assistant custom integration for VOOL EV Chargers and the VOOL LMC (Load Management Controller)
 via Modbus TCP. LMC support requires software v6.4.0 or later and is read-only.
 
-![VOOL Logo](images/logo.png)
-
 ## Features
 
 - **Real-time monitoring**: Power, current, voltage (per phase), energy consumption

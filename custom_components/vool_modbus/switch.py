@@ -10,13 +10,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    DOMAIN,
     DEVICE_TYPE_LMC,
+    DOMAIN,
     REG_CHARGING_COMMAND,
 )
 from .coordinator import VoolModbusCoordinator
 from .entity import VoolModbusEntity
-
 
 # Charging command values per spec
 CHARGING_CMD_START = 1
